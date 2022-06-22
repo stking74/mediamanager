@@ -74,6 +74,16 @@ class File:
 
         return file
 
+    def delete(self):
+        '''
+        Deletes specified file from filesystem (if it exists)
+        '''
+        try:
+            os.remove(self.fullname)
+        except OSError:
+            print(f'WARNING:File {self.fullname} could not be deleted!')
+        return
+
 class Directory:
 
     def __init__(self, location, gethashes=False, filters=None):
@@ -91,7 +101,7 @@ class Directory:
                 hits = [f in item for f in filters]
                 if any(hits):
                     continue
-                    
+
             if os.path.isdir(item):
                 self.contents.append(Directory(item, gethashes))
             else:
@@ -122,16 +132,14 @@ class Directory:
     def find_duplicates(self, filters=None):
         flattened = self.flatten()
         hashes = {}
+
         for item in flattened:
-
-
-
-            h = item['hash']
+            h = item.hash
             if h in hashes:
                 hashes[h][0] += 1
-                hashes[h].append(item['fullname'])
+                hashes[h].append(item)
             else:
-                hashes[h] = [1,item['fullname']]
+                hashes[h] = [1,item]
 
         duplicates = {}
         for k, v in hashes.items():
@@ -143,7 +151,7 @@ class Directory:
         flattened = []
         for item in self:
             if type(item) is File:
-                flattened.append(item.asdict())
+                flattened.append(item)
             else:
                 flattened += item.flatten()
         return flattened
