@@ -86,7 +86,7 @@ class File:
 
 class Directory:
 
-    def __init__(self, location, gethashes=False, filters=None):
+    def __init__(self, location, gethash=False, filters=None):
 
         if not os.path.isabs(location):
             location = os.path.asabs(location)
@@ -103,9 +103,9 @@ class Directory:
                     continue
 
             if os.path.isdir(item):
-                self.contents.append(Directory(item, gethashes))
+                self.contents.append(Directory(item, gethash))
             else:
-                self.contents.append(File(item, gethashes))
+                self.contents.append(File(item, gethash))
         return
 
     def asdict(self):
