@@ -108,12 +108,14 @@ class ScanResult(Slave):
             
         matches = {}
         for h in list(unique_hashes):
-            if all_hashes.count(h) > 2:
+            if all_hashes.count(h) > 1:
                 hits = []
                 for file in flattened:
                     if file.hash == h:
-                        hits.append(file.fullname)
+                        hits.append(file)
                 matches[h] = hits
+                
+        summary_window = DuplicateSummary(self, matches)
         return matches
 
     def populate(self):
@@ -175,4 +177,49 @@ class ScanResult(Slave):
         # tk.Button(self.frame, text='Close', command=self.master.result_gui.close)
         return
     
+class DuplicateSummary(Slave):
+    
+    def __init__(self, master, duplicates):
+        Slave.__init__(self, master)
+        self.duplicates = duplicates
+        self.populate()
+        
+    def populate(self):
+        
+        self.hashtable = ttk.Treeview(self.frame, columns=('index','size','hash','n_duplicates', 'locations'),
+                                      selectmode='extended')
+        self.hashtable.column('#0', width=0, stretch=False)
+        self.hashtable.column('index', anchor='n')
+        self.hashtable.column('size', anchor='n')
+        self.hashtable.column('hash', anchor='n')
+        self.hashtable.column('n_duplicates', anchor='n')
+        self.hashtable.column('locations', anchor='n')
+        
+        self.hashtable.heading('#0', text='', anchor='n')
+        self.hashtable.heading('index', text='Index', anchor='n')
+        self.hashtable.heading('size', text='Size (MB)', anchor='n')
+        self.hashtable.heading('hash', text='Hash', anchor='n')
+        self.hashtable.heading('n_duplicates', text='# Duplicates', anchor='n')
+        self.hashtable.heading('locations', text='Locations', anchor='n')
+
+        
+        for i, (h, item) in enumerate(self.duplicates.items()):
+            index = i + 1
+            size = item[0].filesize / (1000**2)
+            size = f'{size:.05}'
+            filehash = h
+            n_dup = len(item)
+            packaged = (index, size, filehash, n_dup, '')
+            self.hashtable.insert(parent='', index=index, iid=i, text='', values=packaged)
+            
+        ii = int(i) + 1
+        for i, (h, item) in enumerate(self.duplicates.items()):
+            for j, file in enumerate(item):
+                packaged = ('','','','',file.fullname)
+                index = self.hashtable.insert(parent=i, index=j+1, iid=ii, text='', values=packaged)
+                ii += 1
+                
+            
+        self.hashtable.grid(column=1, row=1)
+        
     
