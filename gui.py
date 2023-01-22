@@ -186,6 +186,31 @@ class DuplicateSummary(Slave):
         
     def populate(self):
         
+        def delete_selected_file():
+            index = self.hashtable.focus()
+            current_item = self.hashtable.item(index)
+            filename = current_item['values'][-1]
+            os.remove(filename)
+            self.hashtable.delete(index)
+            return
+        
+        def show_selected_file():
+            index = self.hashtable.focus()
+            current_item = self.hashtable.item(index)
+            filename = current_item['values'][-1]
+            head, tail = os.path.split(filename)
+            os.startfile(head)
+            return
+        
+        def open_selected_file():
+            index = self.hashtable.focus()
+            current_item = self.hashtable.item(index)
+            filename = current_item['values'][-1]
+            os.startfile(filename)
+            return
+            
+        #Build table
+        
         self.hashtable = ttk.Treeview(self.frame, columns=('index','size','hash','n_duplicates', 'locations'),
                                       selectmode='extended')
         self.hashtable.column('#0', width=0, stretch=False)
@@ -202,7 +227,6 @@ class DuplicateSummary(Slave):
         self.hashtable.heading('n_duplicates', text='# Duplicates', anchor='n')
         self.hashtable.heading('locations', text='Locations', anchor='n')
 
-        
         for i, (h, item) in enumerate(self.duplicates.items()):
             index = i + 1
             size = item[0].filesize / (1000**2)
@@ -218,8 +242,18 @@ class DuplicateSummary(Slave):
                 packaged = ('','','','',file.fullname)
                 index = self.hashtable.insert(parent=i, index=j+1, iid=ii, text='', values=packaged)
                 ii += 1
-                
             
         self.hashtable.grid(column=1, row=1)
+        
+        #Place buttons
+        self.delete_button = ttk.Button(self.frame, command=delete_selected_file, text='Delete File')
+        self.show_button = ttk.Button(self.frame, command=show_selected_file, text='Show in Folder...')
+        self.open_button = ttk.Button(self.frame, command=open_selected_file, text='Open')
+        
+        self.delete_button.grid(column=2,row=2)
+        self.show_button.grid(column=2,row=3)
+        self.open_button.grid(column=2,row=4)
+        
+        
         
     
