@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.filedialog as fd
 from tkinter import ttk
 from .core import File, Directory
 import time
@@ -39,6 +40,7 @@ class Master(Window):
         
         #Buttons        
         tk.Button(self.frame, text='Scan', command=self.run_scan).grid(column=0, row=1)
+        tk.Button(self.frame, text='Select Folder...', command=self.fdselect).grid(column=1, row=2)
         
         #Entries and settings
         tk.Label(self.frame, text='Target Directory:').grid(column=1, row=0)
@@ -69,6 +71,12 @@ class Master(Window):
         
     def post_result(self, directory):
         self.result_gui = ScanResult(directory, master=self)
+        return
+    
+    def fdselect(self):
+        selection = fd.askdirectory(mustexist=True)
+        self.targetdir_entry.delete(0)
+        self.targetdir_entry.insert(0, selection)
         return
     
     def close_result(self):
@@ -114,8 +122,9 @@ class ScanResult(Slave):
                     if file.hash == h:
                         hits.append(file)
                 matches[h] = hits
-                
-        summary_window = DuplicateSummary(self, matches)
+        
+        if len(matches) > 0:
+            summary_window = DuplicateSummary(self, matches)
         return matches
 
     def populate(self):
@@ -139,7 +148,9 @@ class ScanResult(Slave):
         #Buttons
         tk.Button(self.frame, text='Close', command=self.close_nicely).grid(column=2, row=5)
         tk.Button(self.frame, text='Find Duplicates', command=self.duplicate_search).grid(column=1, row=5)
+       
         
+        #Data table
         self.table = ttk.Treeview(self.frame)
         self.table['columns'] = ('index','folder','filename','size','hash','extension')
         self.table.column('#0', width=0, stretch=False)
@@ -158,6 +169,9 @@ class ScanResult(Slave):
         self.table.heading('hash', text='Hash', anchor='n')
         self.table.heading('extension', text='Extension', anchor='n')
         # table.heading('modified', text='Modified', anchor='n')
+        #Scrollbar
+        bar = tk.Scrollbar(self.frame, orient='vertical', command=self.table.yview)
+        bar.grid(column=3,row=4)
         
         # sb = tk.Scrollbar(self.frame, orient='vertical')
         # sb.config(command=sb.yview)
@@ -184,7 +198,7 @@ class DuplicateSummary(Slave):
         self.duplicates = duplicates
         self.populate()
         
-    def populate(self):
+    def populate(self, sortcol=None):
         
         def delete_selected_file():
             index = self.hashtable.focus()
@@ -208,6 +222,16 @@ class DuplicateSummary(Slave):
             filename = current_item['values'][-1]
             os.startfile(filename)
             return
+        
+        def sort_by_column(column, ascending=False):
+            alldata = self.hashtable.item()
+            iids = []
+            datas = []
+            for iid, data in alldata.items():
+                iids.append(iid)
+                datas.append(data)
+            
+            sortcolumn = self.hashtable
             
         #Build table
         
@@ -220,14 +244,27 @@ class DuplicateSummary(Slave):
         self.hashtable.column('n_duplicates', anchor='n')
         self.hashtable.column('locations', anchor='n')
         
+        # sortcol = lambda: 
+        
         self.hashtable.heading('#0', text='', anchor='n')
         self.hashtable.heading('index', text='Index', anchor='n')
         self.hashtable.heading('size', text='Size (MB)', anchor='n')
         self.hashtable.heading('hash', text='Hash', anchor='n')
         self.hashtable.heading('n_duplicates', text='# Duplicates', anchor='n')
         self.hashtable.heading('locations', text='Locations', anchor='n')
-
+        
+        sizes =[]
         for i, (h, item) in enumerate(self.duplicates.items()):
+            sizes.append(item[0].filesize / (1000**2))
+        
+        keys = list(self.duplicates.keys())
+        # sortorder = proxy_sort(sizes, keys, reverse=True)
+        # print(self.duplicates)
+        # print(sizes)
+        # print(keys)
+        # print(sortorder)
+        for i, h in enumerate(keys):
+            item = self.duplicates[h]
             index = i + 1
             size = item[0].filesize / (1000**2)
             size = f'{size:.05}'
@@ -254,6 +291,18 @@ class DuplicateSummary(Slave):
         self.show_button.grid(column=2,row=3)
         self.open_button.grid(column=2,row=4)
         
+        #Place text labels
         
+        ttk.Label(self.frame, text=f'Unique duplicated files found:\t{len(self.duplicates)}').grid(column=1, row=5)
+        ttk.Label(self.frame, text=f'Total duplicated files found:\t{ii}').grid(column=1, row=6)
         
+        return
+        
+def proxy_sort(template, data, reverse=False):
+    import numpy as np
+    order = np.argsort(template)
+    if reverse:
+        order = np.flip(order)
+    sorted_data = [data[i] for i in order]
+    return sorted_data
     
