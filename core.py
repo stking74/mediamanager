@@ -234,19 +234,38 @@ class FileTree(dict):
     @staticmethod
     def from_dict(decomposed):
         
-        filetree = FileTree()
-        # if len(decomposed) == 0:
-        #     return filetree
-        # filetree.root = list(decomposed.keys())[0]
-        for key, (item_type, item) in decomposed.items():
+        def construct_toplevel():
+            filetree = FileTree()
+            filetree.root = list(decomposed.keys())[0]
+            return filetree
+        
+        def construct_subdirectory(path, contents):
+            filetree = FileTree()
+            filetree.root = path
+            for key, (item_type, item) in contents.items():
+                if item_type == 'file':
+                    file = File.fromdict(item)                  #Fails when target file has been moved
+                    filetree[file.short_name] = file
+                    filetree.size += file.size
+                elif item_type == 'dir':
+                    subdir = construct_subdirectory(key, item)
+                    head, tail = os.path.split(subdir.root)
+                    filetree[tail] = subdir
+                    filetree.size += subdir.size
+            return filetree
+        
+        filetree = construct_toplevel()
+        root = filetree.root
+        
+        for key, (item_type, item) in decomposed[root][1].items():
             if item_type == 'file':
                 file = File.fromdict(item)
                 filetree[file.short_name] = file
                 filetree.size += file.size
             elif item_type == 'dir':
-                subdir = FileTree.from_dict(item)
-                filetree.root = key
-                filetree[os.path.split(key)[1]] = subdir
+                subdir = construct_subdirectory(key, item)
+                head, tail = os.path.split(key)
+                filetree[tail] = subdir
                 filetree.size += subdir.size
                 
         return filetree
